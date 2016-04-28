@@ -1,12 +1,11 @@
 function drawChart(json) {
     //json = JSON.parse(json);
-    var raw = json[0].data;
     //console.log(json[0].data.Elements[0].DataSeries.close.values.length);
     var chartData = {};
     for (var i = 0; i < json.length; i++) {
         chartData[i] = [];
         for (var j = 0; j < json[i].data.Elements[0].DataSeries.close.values.length; j++) {
-        chartData[i].push({date: new Date(raw.Dates[i]), val: raw.Elements[0].DataSeries.close.values[i]});
+        chartData[i].push({date: new Date(json[i].data.Dates[j]), val: json[i].data.Elements[0].DataSeries.close.values[j]});
         }
     }
     console.log(chartData);
@@ -27,13 +26,15 @@ function drawChart(json) {
     var chart = new AmCharts.AmStockChart();
     chart.pathToImages = "amcharts/images/";
     
+    
     for (var i = 0; i < json.length; i++) {
         var dataSet = new AmCharts.DataSet();
         dataSet.dataProvider = chartData[i];
         dataSet.fieldMappings = [{fromField:"val", toField:"value"}];   
-        dataSet.categoryField = "date";          
+        dataSet.categoryField = "date";
         chart.dataSets.push(dataSet);
     }
+    
     
     var stockPanel = new AmCharts.StockPanel();
     chart.panels = [stockPanel];
@@ -51,6 +52,13 @@ function drawChart(json) {
     graph.title = "MyGraph";
     graph.fillAlphas = 0;
     stockPanel.addStockGraph(graph);
+
+    var graph2 = new AmCharts.StockGraph();
+    graph2.valueField = "value";
+    graph2.type = "line";
+    graph2.title = "MyGraph";
+    graph2.fillAlphas = 0;
+    stockPanel.addStockGraph(graph2);
 
     var categoryAxesSettings = new AmCharts.CategoryAxesSettings();
     categoryAxesSettings.dashLength = 5;
@@ -80,7 +88,7 @@ function drawChart(json) {
     chart.chartScrollbarSettings.enabled = false;
 
     chart.write("chartdiv");
-    
+
 }
 
 function main() {
@@ -95,7 +103,6 @@ function main() {
     dataType: "json",
     error: function() {alert("error");},
     success: function (data) {
-        alert("data received");
         drawChart(data);
         }   
     });

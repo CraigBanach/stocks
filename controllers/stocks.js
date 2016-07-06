@@ -18,24 +18,44 @@ router.post("/getStockHistory", jsonParser, function(req, res) {
     //console.log(req.body.ticker);
     
     var baseUrl = "http://dev.markitondemand.com/MODApis/Api/v2/InteractiveChart/json?parameters=";
-    var parameters = {
+    
+    var parameters = {};
+    var url = {};
+    var requestResult = [];
+    
+    for(var ticker in req.body.tickers) {
+     //console.log(ticker);
+
+      parameters.ticker = {
         "Normalized": false,
         "NumberOfDays":365,
         "DataPeriod": "Day",
         "Elements" : [
             {
-            "Symbol": req.body.ticker,
+            "Symbol": req.body.tickers[ticker],
             "Type": "price",
             "Params": ["c"]
             }
         ]
-    };
-
-
-    var url = encodeURI(baseUrl + JSON.stringify(parameters));
+      };
+      
+      url.ticker = encodeURI(baseUrl + JSON.stringify(parameters.ticker));
+      //console.log(url.ticker);
+      requestResult.push(sendRequest(url.ticker));
+    }
+    
+    Promise.all(requestResult).then(function(data) {
+      console.log(data[0]);
+      res.send(data[0]);
+      res.end;
+    }, function(data) {
+        console.log("Failed some");
+      }
+    );
+    
     
     //console.log(url + "   " + JSON.stringify(parameters));
-    
+    /*
     request(url, function (error, response, body) {
       if (!error && response.statusCode == 200) {
         stockDB.addStock(JSON.parse(body)).then(function (data){ 
@@ -45,6 +65,27 @@ router.post("/getStockHistory", jsonParser, function(req, res) {
         });
       }
     });
+    */
 });
+
+function sendRequest(url) {
+
+
+  return new Promise (function (resolve, reject) {
+      request(url, function (error, response, body) {
+        console.log("request made");
+          if (!error && response.statusCode == 200) {
+            stockDB.addStock(JSON.parse(body)).then(function (data){ 
+              resolve(data);
+              /*
+              console.log(data);
+              res.send(data);
+              res.end;  
+              */
+            });
+          }
+        });
+  });
+}
 
 module.exports = router;

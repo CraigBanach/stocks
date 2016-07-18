@@ -5,6 +5,7 @@ var router = express.Router();
 var bodyParser = require("body-parser");
 var request = require('request');
 var stockDB = require("../models/stocks-model");
+const BASEURL = "http://dev.markitondemand.com/MODApis/Api/v2/InteractiveChart/json?parameters=";
 const API_PARAMETERS = {
           "Normalized": false,
           "NumberOfDays":365,
@@ -29,30 +30,46 @@ router.post("/addNewTicker", jsonParser, function(req, res) {
   //stockDB.getAllStocks("ticker").then(function(stockHistory) {
   stockDB.addStockTicker(req.body.ticker).then(function() {
     stockDB.getAllStocks("ticker", "tickers").then(function(docs) {
+      var promiseArray = [];
       console.log(docs);
-    })
-  })
+      for (var entry in docs) {
+        console.log(entry);
+        var url = makeTickerURL(docs[entry].ticker);
+        console.log(url);
+        promiseArray.push(sendRequest(url));
+      }
+      Promise.all(promiseArray).then(function(data) {
+        console.log(data);
+        res.send(data[0]);
+        res.end;
+      }, function(data) {
+          console.log("Failed some");
+        }
+      );
+      
+    });
+  });
     
 });
 
 function makeTickerURL(ticker) {
   
   var output = API_PARAMETERS;
-  output.Elements.Symbol = ticker;
-  return output;
+  output.Elements[0].Symbol = ticker;
+  return encodeURI(BASEURL + JSON.stringify(output));
 }
 
-router.post("/getStockHistory", jsonParser, function(req, res) {
+router.post("/getStockHistory", function(req, res) {
     
     /**This function takes a number of stock tickers requested by the application, 
      * sends out requests for data for each ticker, stores the data in a DB and then pipes the
      * trend data to the webpage.
      */
     
-  stockDB.getAllStocks("ticker", "tickers").then(
+  stockDB.getAllStocks("ticker", "stocks").then(
     function(stockHistory) {
       //console.log(stockHistory);
-      var baseUrl = "http://dev.markitondemand.com/MODApis/Api/v2/InteractiveChart/json?parameters=";
+      
       
       var url = {};
       var requestResult = [];
@@ -61,9 +78,9 @@ router.post("/getStockHistory", jsonParser, function(req, res) {
   
         var parameters = makeTickerURL(stockHistory[entry].ticker);
         
-        url.ticker = encodeURI(baseUrl + JSON.stringify(parameters));
-  
-        requestResult.push(sendRequest(url.ticker));
+        url.ticker = encodeURI(parameters);
+
+        requestResult.push(sendRequest(parameters));
       }
       
       Promise.all(requestResult).then(function(data) {
@@ -81,14 +98,17 @@ function sendRequest(url) {
 
   return new Promise (function (resolve, reject) {
       request(url, function (error, response, body) {
-        console.log("request made");
-          if (!error && response.statusCode == 200) {
-            stockDB.addStock(JSON.parse(body)).then(function (data){ 
+        if (error) {
+          console.log(error);
+        } else if (response.statusCode == 200) {
+          stockDB.addStock(JSON.parse(body)).then(function (data){ 
               resolve(data);
             });
-          }
-        });
-  });
-}
+        } else {
+          console.log(response.statusCode);
+        }
+    });
+  }
+)}
 
 module.exports = router;

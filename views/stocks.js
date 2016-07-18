@@ -112,7 +112,7 @@ function main() {
   $.ajax({
     type: "POST",
     url: url,
-    data: JSON.stringify({tickers: {1: "GOOG", 2: "AAPL", 3: "AMZN"}}),
+    data: JSON.stringify({tickers: {1: "GOOG", 2: "AAPL", 3: "AMZN", 4: "ppl"}}),
     accepts: "application/json",
     contentType: "application/json",
     dataType: "json",
